@@ -1,4 +1,9 @@
 {
+  "name": "random",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "Itsuki Aoyagi <mail@yagi2.dev>",
+  "license": "MIT",
   "dependencies": {
     "next": "^11.1.0",
     "nextra": "^1.1.0",
