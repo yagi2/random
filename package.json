@@ -5,9 +5,9 @@
   "author": "Itsuki Aoyagi <mail@yagi2.dev>",
   "license": "MIT",
   "dependencies": {
-    "next": "^11.1.0",
-    "nextra": "^1.1.0",
-    "nextra-theme-blog": "^0.1.6",
+    "next": "^12.1.0",
+    "nextra": "^2.0.0-beta.5",
+    "nextra-theme-blog": "^2.0.0-beta.5",
     "prism-react-renderer": "^1.2.1",
     "prismjs": "^1.24.1",
     "react": "^17.0.2",
