@@ -1,6 +1,5 @@
 name: New Post
 description: 新しいブログ記事を Issue 経由で作成。Issue を close すると自動で記事ファイルが生成されます。
-title: ""
 labels:
   - post
 body:
