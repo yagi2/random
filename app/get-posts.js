@@ -12,3 +12,8 @@ export async function getPosts() {
       (a, b) => new Date(b.frontMatter.date) - new Date(a.frontMatter.date)
     )
 }
+
+export async function getTags() {
+  const posts = await getPosts()
+  return posts.flatMap(post => post.frontMatter.tags ?? [])
+}
