@@ -62,12 +62,17 @@ jobs:
             process.exit(1);
           }
 
-          // tags: "diary, nextjs" -> "[diary, nextjs]"
+          // tags: "diary, nextjs" -> '["diary", "nextjs"]'
+          // 各要素を quote する。Nextra/MDX の YAML parser は unquoted な
+          // inline array の要素を期待通り string として扱わないことがある
+          // (例: tags: [diary] が undefined になる) ため明示的に quote する。
           const tagList = tagsRaw
             .split(',')
             .map((t) => t.trim())
             .filter(Boolean);
-          const tagsYaml = `[${tagList.join(', ')}]`;
+          const tagsYaml = `[${tagList
+            .map((t) => `"${t.replace(/"/g, '\\"')}"`)
+            .join(', ')}]`;
 
           // YAML 文字列のエスケープ（: や # を含む場合のため二重引用符でくくる）
           const yamlEscape = (s) =>
