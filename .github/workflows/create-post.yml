@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
   issues: write
 
 jobs:
@@ -104,64 +103,39 @@ jobs:
           const filePath = path.join(dir, 'page.mdx');
           fs.writeFileSync(filePath, content, 'utf8');
 
-          // slug 生成（英数とハイフンのみに正規化）
-          const slug =
-            title
-              .toLowerCase()
-              .replace(/[^a-z0-9]+/g, '-')
-              .replace(/^-+|-+$/g, '')
-              .slice(0, 40) || `issue-${process.env.ISSUE_NUMBER}`;
-
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `file_path=${filePath}\n`);
-          fs.appendFileSync(
-            process.env.GITHUB_OUTPUT,
-            `branch_name=post/${date}-${slug}\n`,
-          );
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `post_date=${date}\n`);
 
           console.log(`Wrote ${filePath}`);
           EOF
 
-      - name: Create Pull Request
-        id: cpr
-        uses: peter-evans/create-pull-request@v7
+      - name: Commit and push to main
+        id: commit
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
-          POST_DATE: ${{ steps.build.outputs.post_date }}
           FILE_PATH: ${{ steps.build.outputs.file_path }}
-        with:
-          branch: ${{ steps.build.outputs.branch_name }}
-          base: main
-          commit-message: |
-            post: ${{ github.event.issue.title }} (#${{ github.event.issue.number }})
-          title: "post: ${{ github.event.issue.title }}"
-          body: |
-            Issue #${{ github.event.issue.number }} の内容から自動生成された記事 PR です。
-
-            - 元 Issue: #${{ github.event.issue.number }}
-            - 公開日: ${{ steps.build.outputs.post_date }}
-            - ファイル: `${{ steps.build.outputs.file_path }}`
-
-            内容を確認のうえ問題なければマージしてください。
-          labels: |
-            post
-            automated
-          delete-branch: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- "$FILE_PATH"
+          # printf の format は固定、untrusted な ISSUE_TITLE は引数として渡し
+          # shell quoting injection を回避する。stdin 経由で git commit に渡す。
+          printf 'post: %s (#%s)\n' "$ISSUE_TITLE" "$ISSUE_NUMBER" | git commit -F -
+          git push origin main
+          echo "commit_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Comment on issue
-        if: steps.cpr.outputs.pull-request-number != ''
         uses: actions/github-script@v8
         env:
-          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
-          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+          COMMIT_SHA: ${{ steps.commit.outputs.commit_sha }}
         with:
           script: |
-            const prNumber = process.env.PR_NUMBER;
-            const prUrl = process.env.PR_URL;
+            const sha = process.env.COMMIT_SHA;
+            const shortSha = sha.slice(0, 7);
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `PR #${prNumber} created: ${prUrl}`
+              body: `Published to \`main\`: ${context.repo.owner}/${context.repo.repo}@${shortSha}`
             });
