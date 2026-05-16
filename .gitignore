@@ -237,3 +237,6 @@ $RECYCLE.BIN/
 # .pnp.*
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,visualstudiocode,node,react,yarn,linux
+
+# Claude Code sub-agent worktrees
+.claude/
