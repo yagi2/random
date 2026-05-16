@@ -1,0 +1,158 @@
+name: Create Post from Issue
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  create-post:
+    # post ラベル付き && completed として close されたときだけ実行
+    if: >-
+      contains(github.event.issue.labels.*.name, 'post') &&
+      github.event.issue.state_reason == 'completed'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Parse issue body
+        id: parse
+        uses: stefanbuck/github-issue-parser@v3
+        with:
+          template-path: .github/ISSUE_TEMPLATE/new-post.yml
+
+      - name: Build post file
+        id: build
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          POST_DATE: ${{ steps.parse.outputs.issueparser_date }}
+          POST_DESCRIPTION: ${{ steps.parse.outputs.issueparser_description }}
+          POST_TAGS: ${{ steps.parse.outputs.issueparser_tags }}
+          POST_AUTHOR: ${{ steps.parse.outputs.issueparser_author }}
+          POST_BODY: ${{ steps.parse.outputs.issueparser_body }}
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const path = require('path');
+
+          const title = process.env.ISSUE_TITLE || '';
+          const date = (process.env.POST_DATE || '').trim();
+          const description = (process.env.POST_DESCRIPTION || '').trim();
+          const tagsRaw = (process.env.POST_TAGS || 'diary').trim();
+          const author = (process.env.POST_AUTHOR || 'yagi2').trim();
+          const body = process.env.POST_BODY || '';
+
+          // date のバリデーション（YYYY-MM-DD）
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            console.error(`Invalid date format: "${date}" (expected YYYY-MM-DD)`);
+            process.exit(1);
+          }
+
+          // tags: "diary, nextjs" -> "[diary, nextjs]"
+          const tagList = tagsRaw
+            .split(',')
+            .map((t) => t.trim())
+            .filter(Boolean);
+          const tagsYaml = `[${tagList.join(', ')}]`;
+
+          // YAML 文字列のエスケープ（: や # を含む場合のため二重引用符でくくる）
+          const yamlEscape = (s) =>
+            `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+
+          const frontmatter = [
+            '---',
+            `title: ${yamlEscape(title)}`,
+            `date: ${date}`,
+            `description: ${yamlEscape(description)}`,
+            `tags: ${tagsYaml}`,
+            `author: ${author}`,
+            '---',
+            '',
+          ].join('\n');
+
+          // 本文の改行を LF に統一し末尾を整える
+          const normalizedBody =
+            body.replace(/\r\n/g, '\n').replace(/\s+$/, '') + '\n';
+
+          const content = frontmatter + '\n' + normalizedBody;
+
+          const dir = path.join('app', '(post)', date);
+          fs.mkdirSync(dir, { recursive: true });
+          const filePath = path.join(dir, 'page.mdx');
+          fs.writeFileSync(filePath, content, 'utf8');
+
+          // slug 生成（英数とハイフンのみに正規化）
+          const slug =
+            title
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '')
+              .slice(0, 40) || `issue-${process.env.ISSUE_NUMBER}`;
+
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `file_path=${filePath}\n`);
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `branch_name=post/${date}-${slug}\n`,
+          );
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `post_date=${date}\n`);
+
+          console.log(`Wrote ${filePath}`);
+          EOF
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v7
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          POST_DATE: ${{ steps.build.outputs.post_date }}
+          FILE_PATH: ${{ steps.build.outputs.file_path }}
+        with:
+          branch: ${{ steps.build.outputs.branch_name }}
+          base: main
+          commit-message: |
+            post: ${{ github.event.issue.title }} (#${{ github.event.issue.number }})
+          title: "post: ${{ github.event.issue.title }}"
+          body: |
+            Issue #${{ github.event.issue.number }} の内容から自動生成された記事 PR です。
+
+            - 元 Issue: #${{ github.event.issue.number }}
+            - 公開日: ${{ steps.build.outputs.post_date }}
+            - ファイル: `${{ steps.build.outputs.file_path }}`
+
+            内容を確認のうえ問題なければマージしてください。
+          labels: |
+            post
+            automated
+          delete-branch: true
+
+      - name: Comment on issue
+        if: steps.cpr.outputs.pull-request-number != ''
+        uses: actions/github-script@v8
+        env:
+          PR_NUMBER: ${{ steps.cpr.outputs.pull-request-number }}
+          PR_URL: ${{ steps.cpr.outputs.pull-request-url }}
+        with:
+          script: |
+            const prNumber = process.env.PR_NUMBER;
+            const prUrl = process.env.PR_URL;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `PR #${prNumber} created: ${prUrl}`
+            });

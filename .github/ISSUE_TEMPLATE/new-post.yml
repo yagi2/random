@@ -1,0 +1,61 @@
+name: New Post
+description: 新しいブログ記事を Issue 経由で作成。Issue を close すると自動で記事ファイルが生成されます。
+title: ""
+labels:
+  - post
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 新しい記事を投稿する
+        各項目を埋めて Issue を作成してください。
+        **Issue タイトルがそのまま記事タイトル**になります（frontmatter の `title`）。
+        Issue を `Close as completed` で閉じると、自動で MDX ファイルが生成された PR が立ちます。
+
+  - type: input
+    id: date
+    attributes:
+      label: date
+      description: 公開日。記事ファイルパス (`app/(post)/<date>/page.mdx`) と frontmatter に使われる。
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: description
+      description: 1〜2行の概要。OGP に使われる。
+      placeholder: 電音部のこと
+    validations:
+      required: true
+
+  - type: input
+    id: tags
+    attributes:
+      label: tags
+      description: "カンマ区切り。例: diary, nextjs"
+      value: diary
+    validations:
+      required: true
+
+  - type: input
+    id: author
+    attributes:
+      label: author
+      description: 著者名
+      value: yagi2
+    validations:
+      required: true
+
+  - type: textarea
+    id: body
+    attributes:
+      label: body
+      description: 本文（Markdown）
+      placeholder: |
+        # 見出し
+
+        本文ここから...
+    validations:
+      required: true
