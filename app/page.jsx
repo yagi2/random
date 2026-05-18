@@ -1,5 +1,5 @@
-import { PostCard } from 'nextra-theme-blog'
 import { getPosts } from './get-posts'
+import { PostsList } from './posts-list'
 
 export const metadata = {
   title: 'Random'
@@ -10,9 +10,7 @@ export default async function HomePage() {
   return (
     <>
       <h1>Random</h1>
-      {posts.map(post => (
-        <PostCard key={post.route} post={post} />
-      ))}
+      <PostsList posts={posts} currentPage={1} />
     </>
   )
 }
