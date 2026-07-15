@@ -20,15 +20,6 @@ body:
     validations:
       required: true
 
-  - type: textarea
-    id: description
-    attributes:
-      label: description
-      description: 1〜2行の概要。OGP に使われる。
-      placeholder: 電音部のこと
-    validations:
-      required: true
-
   - type: input
     id: tags
     attributes:

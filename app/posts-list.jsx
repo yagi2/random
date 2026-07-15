@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { PostCard } from 'nextra-theme-blog'
+import { formatDate } from '../mdx-components'
 
 export const POSTS_PER_PAGE = 10
 
@@ -15,6 +15,29 @@ export function PostsList({ posts, currentPage }) {
       ))}
       <Pagination currentPage={currentPage} totalPages={totalPages} />
     </>
+  )
+}
+
+function PostCard({ post }) {
+  const { title, date } = post.frontMatter
+  const dateObj = date && new Date(date)
+
+  return (
+    <div>
+      <h2 className="x:mt-6 x:mb-2 x:text-xl x:font-semibold">
+        <Link href={post.route} className="x:no-underline!">
+          {title}
+        </Link>
+      </h2>
+      {dateObj && (
+        <time
+          className="x:text-sm x:dark:text-gray-400 x:text-gray-600"
+          dateTime={dateObj.toISOString()}
+        >
+          {formatDate(dateObj)}
+        </time>
+      )}
+    </div>
   )
 }
 

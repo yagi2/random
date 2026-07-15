@@ -43,7 +43,6 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           POST_DATE: ${{ steps.parse.outputs.issueparser_date }}
-          POST_DESCRIPTION: ${{ steps.parse.outputs.issueparser_description }}
           POST_TAGS: ${{ steps.parse.outputs.issueparser_tags }}
           POST_AUTHOR: ${{ steps.parse.outputs.issueparser_author }}
           POST_BODY: ${{ steps.parse.outputs.issueparser_body }}
@@ -54,7 +53,6 @@ jobs:
 
           const title = process.env.ISSUE_TITLE || '';
           const date = (process.env.POST_DATE || '').trim();
-          const description = (process.env.POST_DESCRIPTION || '').trim();
           const tagsRaw = (process.env.POST_TAGS || 'diary').trim();
           const author = (process.env.POST_AUTHOR || 'yagi2').trim();
           const body = process.env.POST_BODY || '';
@@ -85,7 +83,6 @@ jobs:
             '---',
             `title: ${yamlEscape(title)}`,
             `date: ${date}`,
-            `description: ${yamlEscape(description)}`,
             `tags: ${tagsYaml}`,
             `author: ${author}`,
             '---',
